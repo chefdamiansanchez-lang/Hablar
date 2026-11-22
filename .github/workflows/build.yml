@@ -1,0 +1,42 @@
+name: Compilar APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Descomprimir el zip
+        run: |
+          ZIP=$(ls *.zip | head -n 1)
+          mkdir -p proyecto
+          unzip -o "$ZIP" -d proyecto
+          RAIZ=$(dirname "$(find proyecto -name settings.gradle.kts | head -n 1)")
+          echo "RAIZ=$RAIZ" >> $GITHUB_ENV
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+
+      - name: Compilar
+        run: |
+          cd "$RAIZ"
+          gradle assembleDebug --no-daemon
+
+      - name: Subir APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hablemos-APK
+          path: ${{ env.RAIZ }}/app/build/outputs/apk/debug/*.apk
